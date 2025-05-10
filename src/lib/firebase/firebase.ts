@@ -1,6 +1,6 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
-import { getAuth, type Auth } from "firebase/auth";
+import { getAuth, type Auth, GoogleAuthProvider } from "firebase/auth"; // Added GoogleAuthProvider
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -50,11 +50,12 @@ if (configIssueFound) {
     "     NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789012\n" +
     "     NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789012:web:abcdef1234567890abc\n" +
     "     NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-XXXXXXXXXX (this one is optional for Auth)\n\n" +
-    "2. EMAIL/PASSWORD PROVIDER NOT ENABLED IN FIREBASE CONSOLE:\n" +
+    "2. SIGN-IN PROVIDERS NOT ENABLED IN FIREBASE CONSOLE:\n" +
     "   - Go to your Firebase project console.\n" +
     "   - Navigate to 'Authentication' (under Build).\n" +
     "   - Go to the 'Sign-in method' tab.\n" +
-    "   - Ensure the 'Email/Password' provider is ENABLED.\n\n" +
+    "   - Ensure the 'Email/Password' provider is ENABLED.\n" +
+    "   - If using Google Sign-In, ensure the 'Google' provider is ENABLED and configured.\n\n" +
     "Please verify these steps carefully to resolve the authentication issue.\n" +
     "----------------------------------------------------------------------------------"
   );
@@ -99,4 +100,4 @@ if (app) {
 }
 
 
-export { app, auth };
+export { app, auth, GoogleAuthProvider }; // Exported GoogleAuthProvider
