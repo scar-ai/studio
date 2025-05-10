@@ -77,6 +77,7 @@ Create a series of question-and-answer flashcards based *only* on this provided 
 - Do NOT create flashcards about the PDF file itself, its format, how it was provided, or the tools used.
 - Focus solely on the informational content *within* the provided text chunk.
 - If no relevant content is found in this chunk to create flashcards, return an empty array.
+- Generate the flashcards in the language of the provided pdf
 
 Output the flashcards as a JSON array of objects, where each object has a 'question' and 'answer' field.`,
 });

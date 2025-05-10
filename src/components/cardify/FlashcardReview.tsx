@@ -1,13 +1,18 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
 import type { AppFlashcardClient, ReviewableFlashcard } from '@/types/flashcard';
 import Flashcard from './Flashcard';
+import LoadingSpinner from './LoadingSpinner';
 import { Button } from '@/components/ui/button';
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, ArrowRight, CheckCircle2, RotateCcw, Shuffle } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ArrowLeft, ArrowRight, CheckCircle2, RotateCcw, Shuffle, MessageSquareQuote, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { answerFlashcardQuestion, type AnswerFlashcardQuestionInput } from '@/ai/flows/answer-flashcard-question-flow';
+
 
 interface FlashcardReviewProps {
   initialFlashcards: AppFlashcardClient[];
@@ -18,15 +23,27 @@ export default function FlashcardReview({ initialFlashcards }: FlashcardReviewPr
   const [currentIndex, setCurrentIndex] = useState(0);
   const { toast } = useToast();
 
+  const [userQuestion, setUserQuestion] = useState('');
+  const [aiAnswer, setAiAnswer] = useState<string | null>(null);
+  const [isAnswering, setIsAnswering] = useState(false);
+
   useEffect(() => {
     setCards(
       initialFlashcards.map(card => ({ ...card, isFlipped: false }))
     );
     setCurrentIndex(0);
+    setUserQuestion('');
+    setAiAnswer(null);
   }, [initialFlashcards]);
+
+  const resetQuestionState = () => {
+    setUserQuestion('');
+    setAiAnswer(null);
+  };
 
   const navigate = useCallback((direction: 'next' | 'prev') => {
     setCards(prevCards => prevCards.map(card => ({ ...card, isFlipped: false }))); // Flip back all cards
+    resetQuestionState();
     setCurrentIndex(prevIndex => {
       if (direction === 'next') {
         return prevIndex < cards.length - 1 ? prevIndex + 1 : prevIndex;
@@ -67,8 +84,34 @@ export default function FlashcardReview({ initialFlashcards }: FlashcardReviewPr
       return shuffled.map(card => ({ ...card, isFlipped: false }));
     });
     setCurrentIndex(0);
+    resetQuestionState();
     toast({ title: "Cards Shuffled!", duration: 2000 });
   };
+
+  const handleAskAiQuestion = async () => {
+    if (!userQuestion.trim() || !currentCard) {
+      toast({ title: "Please enter a question.", variant: "destructive", duration: 2000 });
+      return;
+    }
+    setIsAnswering(true);
+    setAiAnswer(null);
+    try {
+      const input: AnswerFlashcardQuestionInput = {
+        flashcardQuestion: currentCard.question,
+        flashcardAnswer: currentCard.answer,
+        userQuestion: userQuestion,
+      };
+      const result = await answerFlashcardQuestion(input);
+      setAiAnswer(result.aiAnswer);
+    } catch (error) {
+      console.error("Error getting AI answer:", error);
+      toast({ title: "AI Error", description: "Could not get an answer from AI. Please try again.", variant: "destructive" });
+      setAiAnswer("Sorry, I couldn't process your question right now.");
+    } finally {
+      setIsAnswering(false);
+    }
+  };
+
 
   if (!cards.length) {
     return (
@@ -126,6 +169,44 @@ export default function FlashcardReview({ initialFlashcards }: FlashcardReviewPr
           <Shuffle className="mr-2 h-4 w-4" /> Shuffle Cards
         </Button>
       </div>
+
+      {/* AI Question Area */}
+      <Card className="shadow-md">
+        <CardHeader>
+          <CardTitle className="flex items-center text-xl">
+            <MessageSquareQuote className="mr-2 h-6 w-6 text-accent" />
+            Ask AI about this Card
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Textarea
+            placeholder="Type your question about the current flashcard..."
+            value={userQuestion}
+            onChange={(e) => setUserQuestion(e.target.value)}
+            rows={3}
+            disabled={isAnswering}
+          />
+          <Button onClick={handleAskAiQuestion} disabled={isAnswering || !userQuestion.trim()} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
+            <Sparkles className="mr-2 h-4 w-4" />
+            {isAnswering ? 'Thinking...' : 'Ask AI'}
+          </Button>
+          {isAnswering && (
+            <div className="flex justify-center py-4">
+              <LoadingSpinner size="md" />
+            </div>
+          )}
+          {aiAnswer && !isAnswering && (
+            <Card className="bg-secondary/50 mt-4">
+              <CardHeader>
+                <CardTitle className="text-lg text-secondary-foreground">AI's Answer</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-secondary-foreground whitespace-pre-wrap">{aiAnswer}</p>
+              </CardContent>
+            </Card>
+          )}
+        </CardContent>
+      </Card>
     </section>
   );
 }
