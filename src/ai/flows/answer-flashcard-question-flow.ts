@@ -35,6 +35,11 @@ const prompt = ai.definePrompt({
   output: {schema: AnswerFlashcardQuestionOutputSchema},
   prompt: `You are a helpful study assistant. The user is currently reviewing a flashcard and has a question about it.
 
+When providing answers or explanations that involve mathematical expressions or formulas, please use LaTeX format.
+- For inline mathematics, use single dollar signs: \`$your_latex_code$\` (e.g., \`$E=mc^2$\`).
+- For display/block mathematics, use double dollar signs: \`$$your_latex_code$$\` (e.g., \`$$\sum_{i=1}^n i = \frac{n(n+1)}{2}$$\`).
+Ensure the LaTeX code is valid.
+
 Flashcard Question:
 "{{flashcardQuestion}}"
 

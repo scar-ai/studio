@@ -1,6 +1,6 @@
 export interface FlashcardCore {
-  question: string;
-  answer: string;
+  question: string; // Keep as string, MathText will handle if it's empty/null by rendering nothing
+  answer: string;   // Keep as string
 }
 
 export interface AppFlashcardClient extends FlashcardCore {

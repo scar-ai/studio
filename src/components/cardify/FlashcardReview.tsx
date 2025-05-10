@@ -5,6 +5,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import type { AppFlashcardClient, ReviewableFlashcard } from '@/types/flashcard';
 import Flashcard from './Flashcard';
 import LoadingSpinner from './LoadingSpinner';
+import MathText from './MathText'; // Import MathText
 import { Button } from '@/components/ui/button';
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from '@/components/ui/textarea';
@@ -203,8 +204,8 @@ export default function FlashcardReview({ initialFlashcards, sourceMaterial }: F
               <CardHeader>
                 <CardTitle className="text-lg text-secondary-foreground">AI's Answer</CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-secondary-foreground whitespace-pre-wrap">{aiAnswer}</p>
+              <CardContent className="text-secondary-foreground">
+                <MathText text={aiAnswer} />
               </CardContent>
             </Card>
           )}

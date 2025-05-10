@@ -36,7 +36,7 @@ export async function imageToFlashcard(input: ImageToFlashcardInput): Promise<Im
 
 const extractConceptsTool = ai.defineTool({
   name: 'extractConcepts',
-  description: 'Extract key concepts and generate question/answer pairs from an image of notes.',
+  description: 'Extract key concepts and generate question/answer pairs from an image of notes. If mathematical expressions are present, format them using LaTeX: $inline_math$ for inline and $$block_math$$ for block.',
   inputSchema: z.object({
     photoDataUri: z
       .string()
@@ -51,6 +51,7 @@ async (input) => {
     // Placeholder implementation for concept extraction from image
     // In a real application, this would involve OCR and NLP techniques
     // to identify key concepts and generate relevant questions and answers.
+    // The actual LLM call using this tool would be responsible for LaTeX formatting.
     return [
       {
         question: 'What is the main topic discussed in the notes?',
@@ -70,10 +71,14 @@ const imageToFlashcardPrompt = ai.definePrompt({
   input: {schema: ImageToFlashcardInputSchema},
   output: {schema: ImageToFlashcardOutputSchema},
   prompt: `You are an AI assistant designed to help students create flashcards from their notes.
+When generating flashcard questions or answers that involve mathematical expressions or formulas, please use LaTeX format.
+- For inline mathematics, use single dollar signs: \`$your_latex_code$\` (e.g., \`$E=mc^2$\`).
+- For display/block mathematics, use double dollar signs: \`$$your_latex_code$$\` (e.g., \`$$\sum_{i=1}^n i = \frac{n(n+1)}{2}$$\`).
+Ensure the LaTeX code is valid.
 
-  Please use the extractConcepts tool to extract the flashcards from the image.
+Please use the extractConcepts tool to extract the flashcards from the image.
 
-  Image: {{media url=photoDataUri}}
+Image: {{media url=photoDataUri}}
   `,
 });
 

@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import MathText from "./MathText"; // Import the new MathText component
 
 interface FlashcardProps {
   question: string;
@@ -24,7 +25,9 @@ export default function Flashcard({ question, answer, isFlipped, className }: Fl
               <CardTitle className="text-xl text-secondary-foreground">Question</CardTitle>
             </CardHeader>
             <CardContent className="flex-grow flex items-center justify-center p-6 text-center">
-              <p className="text-lg md:text-xl">{question}</p>
+              <div className="text-lg md:text-xl w-full"> {/* Ensure MathText can use full width */}
+                <MathText text={question} />
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -36,7 +39,9 @@ export default function Flashcard({ question, answer, isFlipped, className }: Fl
               <CardTitle className="text-xl text-accent-foreground">Answer</CardTitle>
             </CardHeader>
             <CardContent className="flex-grow flex items-center justify-center p-6 text-center">
-              <p className="text-lg md:text-xl">{answer}</p>
+              <div className="text-lg md:text-xl w-full"> {/* Ensure MathText can use full width */}
+                <MathText text={answer} />
+              </div>
             </CardContent>
           </Card>
         </div>

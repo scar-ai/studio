@@ -71,6 +71,11 @@ const generateFlashcardsFromTextChunkPrompt = ai.definePrompt({
   prompt: `You are an AI assistant specialized in creating high-quality educational flashcards.
 You are processing a segment of a larger document. Your task is to analyze the following text chunk and generate flashcards *only* from the content within this specific chunk.
 
+When generating flashcard questions or answers that involve mathematical expressions or formulas, please use LaTeX format.
+- For inline mathematics, use single dollar signs: \`$your_latex_code$\` (e.g., \`$E=mc^2$\`).
+- For display/block mathematics, use double dollar signs: \`$$your_latex_code$$\` (e.g., \`$$\sum_{i=1}^n i = \frac{n(n+1)}{2}$$\`).
+Ensure the LaTeX code is valid.
+
 Text Chunk:
 {{{textChunk}}}
 
