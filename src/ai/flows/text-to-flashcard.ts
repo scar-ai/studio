@@ -58,7 +58,11 @@ When generating flashcard questions or answers that involve mathematical express
 - For display/block mathematics, use double dollar signs: \`$$your_latex_code$$\` (e.g., \`$$\sum_{i=1}^n i = \frac{n(n+1)}{2}$$\`).
 Ensure the LaTeX code is valid.
 
-Focus on information that is crucial for understanding the subject matter. Avoid creating flashcards for trivial details, examples unless they illustrate a key concept, or overly specific data points unless they are fundamental. The flashcards should help a student learn and remember the most essential parts of the text.
+- Questions should be clear and test understanding of the key material in this chunk.
+- Answers should be concise, accurate, and directly derived from this chunk, reflecting the most important information.
+- Focus solely on the informational content *within* the provided text chunk that holds the most educational value.
+- If no relevant, important content is found in this chunk to create flashcards, return an empty array.
+- Generate the flashcards in the language of the provided pdf.
 
 The text is:
 {{{text}}}

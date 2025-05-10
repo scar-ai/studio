@@ -9,7 +9,7 @@ export default function LoadingSpinner({ size = "md" }: { size?: "sm" | "md" | "
   return (
     <div className="flex flex-col items-center justify-center space-y-2">
       <Loader2 className={`animate-spin text-accent ${sizeClasses[size]}`} />
-      <p className="text-muted-foreground">Generating flashcards...</p>
+      <p className="text-muted-foreground">Thinking...</p>
     </div>
   );
 }

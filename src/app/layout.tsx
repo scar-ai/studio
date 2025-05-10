@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google'; // Corrected import
 import './globals.css';
 import 'katex/dist/katex.min.css'; // Import KaTeX CSS
 import { Toaster } from "@/components/ui/toaster";
+import { AuthProvider } from '@/context/AuthContext';
 
 const geistSans = Geist({ // Corrected instantiation
   variable: '--font-geist-sans',
@@ -27,8 +28,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
-        {children}
-        <Toaster />
+        <AuthProvider>
+          {children}
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );

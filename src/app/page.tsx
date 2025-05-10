@@ -7,6 +7,8 @@ import FlashcardReview from '@/components/cardify/FlashcardReview';
 import LoadingSpinner from '@/components/cardify/LoadingSpinner';
 import type { FlashcardCore, AppFlashcardClient } from '@/types/flashcard';
 import { Card, CardContent } from '@/components/ui/card';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
 
 export interface GenerationResult {
   flashcards: FlashcardCore[];
@@ -19,13 +21,21 @@ export default function HomePage() {
   const [isClient, setIsClient] = useState(false);
   const [sourceMaterial, setSourceMaterial] = useState<{text?: string; imageUri?: string} | null>(null);
 
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
-    setIsClient(true); // Ensures crypto.randomUUID is called only on client
+    setIsClient(true); 
   }, []);
 
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace('/login');
+    }
+  }, [user, authLoading, router]);
+
   const handleFlashcardsGenerated = (result: GenerationResult) => {
-    if (!isClient) return; // Guard against server-side execution if any
+    if (!isClient) return; 
 
     const newFlashcards: AppFlashcardClient[] = result.flashcards.map((card) => ({
       ...card,
@@ -35,6 +45,16 @@ export default function HomePage() {
     setFlashcards(newFlashcards);
     setSourceMaterial(result.sourceContext || null);
   };
+
+  if (authLoading || !user) {
+    // Show loading spinner or null while checking auth state or if user is not logged in
+    // This prevents rendering the main content before redirection or if auth is still loading.
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">

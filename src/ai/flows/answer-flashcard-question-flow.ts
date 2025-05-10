@@ -64,8 +64,9 @@ User's Question (about the flashcard or related concepts):
 Please provide a clear and concise answer to the user's question.
 1. Prioritize information directly from the flashcard if the question is specific to it.
 2. If the flashcard content is insufficient, or the question asks for broader context, refer to the provided source document (text or image, if available).
-3. You may also use your general knowledge to elaborate on concepts, explain related topics, or if the specific information is not in the provided materials.
+3. You may also use your general knowledge to elaborate on concepts, explain related topics, or if the specific information is not in the provided materials while still remaining coherent with it.
 4. If the user's question seems completely unrelated to the flashcard topic or the source document, politely state that you can provide the most relevant answers to questions related to the study material.
+5. Answer in the same language as the user
 
 Focus on being helpful and educational. Your response should directly address the "{{userQuestion}}".
 `,
