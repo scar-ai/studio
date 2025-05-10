@@ -8,24 +8,32 @@ import LoadingSpinner from '@/components/cardify/LoadingSpinner';
 import type { FlashcardCore, AppFlashcardClient } from '@/types/flashcard';
 import { Card, CardContent } from '@/components/ui/card';
 
+export interface GenerationResult {
+  flashcards: FlashcardCore[];
+  sourceContext?: { text?: string; imageUri?: string };
+}
+
 export default function HomePage() {
   const [flashcards, setFlashcards] = useState<AppFlashcardClient[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [sourceMaterial, setSourceMaterial] = useState<{text?: string; imageUri?: string} | null>(null);
+
 
   useEffect(() => {
     setIsClient(true); // Ensures crypto.randomUUID is called only on client
   }, []);
 
-  const handleFlashcardsGenerated = (generatedCards: FlashcardCore[]) => {
+  const handleFlashcardsGenerated = (result: GenerationResult) => {
     if (!isClient) return; // Guard against server-side execution if any
 
-    const newFlashcards: AppFlashcardClient[] = generatedCards.map((card) => ({
+    const newFlashcards: AppFlashcardClient[] = result.flashcards.map((card) => ({
       ...card,
       id: crypto.randomUUID(), 
       isKnown: false,
     }));
     setFlashcards(newFlashcards);
+    setSourceMaterial(result.sourceContext || null);
   };
 
   return (
@@ -45,7 +53,7 @@ export default function HomePage() {
         )}
 
         {!isLoading && flashcards.length > 0 && (
-          <FlashcardReview initialFlashcards={flashcards} />
+          <FlashcardReview initialFlashcards={flashcards} sourceMaterial={sourceMaterial} />
         )}
         
         {!isLoading && flashcards.length === 0 && (

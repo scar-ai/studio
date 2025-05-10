@@ -1,8 +1,9 @@
 'use server';
 /**
- * @fileOverview Provides a Genkit flow to answer user questions about a specific flashcard.
+ * @fileOverview Provides a Genkit flow to answer user questions about a specific flashcard,
+ * potentially using the context of the original document and general AI knowledge.
  *
- * - answerFlashcardQuestion - A function that takes a flashcard's content and a user's question, then returns an AI-generated answer.
+ * - answerFlashcardQuestion - A function that takes flashcard details, user's question, and optional source context, then returns an AI-generated answer.
  * - AnswerFlashcardQuestionInput - The input type for the answerFlashcardQuestion function.
  * - AnswerFlashcardQuestionOutput - The return type for the answerFlashcardQuestion function.
  */
@@ -14,6 +15,8 @@ const AnswerFlashcardQuestionInputSchema = z.object({
   flashcardQuestion: z.string().describe('The question part of the flashcard.'),
   flashcardAnswer: z.string().describe('The answer part of the flashcard.'),
   userQuestion: z.string().describe('The user\'s question about this flashcard.'),
+  sourceContextText: z.string().optional().describe('The textual content of the original document/source from which this flashcard was generated. Use this for broader context if the flashcard content is insufficient.'),
+  sourceContextImageUri: z.string().optional().describe("A data URI of the original image source, if the flashcard was generated from an image. Expected format: 'data:<mimetype>;base64,<encoded_data>'. Use this for visual context."),
 });
 export type AnswerFlashcardQuestionInput = z.infer<typeof AnswerFlashcardQuestionInputSchema>;
 
@@ -38,14 +41,28 @@ Flashcard Question:
 Flashcard Answer:
 "{{flashcardAnswer}}"
 
-User's Question about this flashcard:
+{{#if sourceContextText}}
+This flashcard was derived from the following text. You should use this as the primary source of broader context:
+--- Document Text Start ---
+{{sourceContextText}}
+--- Document Text End ---
+{{/if}}
+
+{{#if sourceContextImageUri}}
+This flashcard was derived from the following image. You should use this as the primary source of broader visual context:
+{{media url=sourceContextImageUri}}
+{{/if}}
+
+User's Question (about the flashcard or related concepts):
 "{{userQuestion}}"
 
-Please provide a clear and concise answer to the user's question, using the context of the flashcard.
-If the user's question is unrelated to the flashcard, politely state that you can only answer questions about the current flashcard's content.
-Focus on explaining or elaborating on the concepts presented in the flashcard as they relate to the user's question.
-Do not invent information not supported by the flashcard content.
-Your response should directly address the "{{userQuestion}}".
+Please provide a clear and concise answer to the user's question.
+1. Prioritize information directly from the flashcard if the question is specific to it.
+2. If the flashcard content is insufficient, or the question asks for broader context, refer to the provided source document (text or image, if available).
+3. You may also use your general knowledge to elaborate on concepts, explain related topics, or if the specific information is not in the provided materials.
+4. If the user's question seems completely unrelated to the flashcard topic or the source document, politely state that you can provide the most relevant answers to questions related to the study material.
+
+Focus on being helpful and educational. Your response should directly address the "{{userQuestion}}".
 `,
 });
 

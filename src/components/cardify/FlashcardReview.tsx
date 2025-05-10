@@ -16,9 +16,10 @@ import { answerFlashcardQuestion, type AnswerFlashcardQuestionInput } from '@/ai
 
 interface FlashcardReviewProps {
   initialFlashcards: AppFlashcardClient[];
+  sourceMaterial: {text?: string; imageUri?: string} | null;
 }
 
-export default function FlashcardReview({ initialFlashcards }: FlashcardReviewProps) {
+export default function FlashcardReview({ initialFlashcards, sourceMaterial }: FlashcardReviewProps) {
   const [cards, setCards] = useState<ReviewableFlashcard[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const { toast } = useToast();
@@ -42,7 +43,7 @@ export default function FlashcardReview({ initialFlashcards }: FlashcardReviewPr
   };
 
   const navigate = useCallback((direction: 'next' | 'prev') => {
-    setCards(prevCards => prevCards.map(card => ({ ...card, isFlipped: false }))); // Flip back all cards
+    setCards(prevCards => prevCards.map(card => ({ ...card, isFlipped: false }))); 
     resetQuestionState();
     setCurrentIndex(prevIndex => {
       if (direction === 'next') {
@@ -100,6 +101,8 @@ export default function FlashcardReview({ initialFlashcards }: FlashcardReviewPr
         flashcardQuestion: currentCard.question,
         flashcardAnswer: currentCard.answer,
         userQuestion: userQuestion,
+        sourceContextText: sourceMaterial?.text || undefined,
+        sourceContextImageUri: sourceMaterial?.imageUri || undefined,
       };
       const result = await answerFlashcardQuestion(input);
       setAiAnswer(result.aiAnswer);
@@ -180,7 +183,7 @@ export default function FlashcardReview({ initialFlashcards }: FlashcardReviewPr
         </CardHeader>
         <CardContent className="space-y-4">
           <Textarea
-            placeholder="Type your question about the current flashcard..."
+            placeholder="Type your question about the current flashcard or related concepts from the source document..."
             value={userQuestion}
             onChange={(e) => setUserQuestion(e.target.value)}
             rows={3}

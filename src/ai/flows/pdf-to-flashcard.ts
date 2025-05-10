@@ -4,10 +4,11 @@
 /**
  * @fileOverview Converts PDF documents into flashcards.
  * Handles long PDFs by processing extracted text in chunks.
+ * Returns generated flashcards and the full extracted text content.
  *
- * - pdfToFlashcard - A function that takes a PDF document (as a data URI) and returns a set of flashcards.
+ * - pdfToFlashcard - A function that takes a PDF document (as a data URI) and returns flashcards and extracted text.
  * - PdfToFlashcardInput - The input type for the pdfToFlashcard function.
- * - PdfToFlashcardOutput - The return type for the pdfToFlashcard function.
+ * - PdfToFlashcardOutput - The return type for the pdfToFlashcard function, now including extractedText.
  */
 
 import {ai} from '@/ai/genkit';
@@ -27,7 +28,10 @@ const FlashcardSchema = z.object({
   answer: z.string().describe('The answer to the question.'),
 });
 
-const PdfToFlashcardOutputSchema = z.array(FlashcardSchema);
+const PdfToFlashcardOutputSchema = z.object({
+  flashcards: z.array(FlashcardSchema).describe("An array of generated flashcards."),
+  extractedText: z.string().describe("The full text extracted from the PDF document."),
+});
 export type PdfToFlashcardOutput = z.infer<typeof PdfToFlashcardOutputSchema>;
 
 export async function pdfToFlashcard(input: PdfToFlashcardInput): Promise<PdfToFlashcardOutput> {
@@ -37,7 +41,7 @@ export async function pdfToFlashcard(input: PdfToFlashcardInput): Promise<PdfToF
 const extractTextContentFromPdfTool = ai.defineTool({
   name: 'extractTextContentFromPdfTool',
   description: 'Extracts the textual content from a given PDF document. This tool focuses on retrieving the substantive information within the PDF, ignoring metadata or formatting instructions about the PDF itself.',
-  inputSchema: z.object({ // Matches PdfToFlashcardInputSchema for direct use
+  inputSchema: z.object({ 
     pdfDataUri: z
       .string()
       .describe(
@@ -46,7 +50,7 @@ const extractTextContentFromPdfTool = ai.defineTool({
   }),
   outputSchema: z.string().describe('The extracted textual content from the PDF document.'),
 },
-async (input: { pdfDataUri: string }) => { // Explicitly type input based on schema
+async (input: { pdfDataUri: string }) => { 
   const { pdfDataUri } = input;
   
   const llmResponse = await ai.generate({
@@ -63,7 +67,7 @@ async (input: { pdfDataUri: string }) => { // Explicitly type input based on sch
 const generateFlashcardsFromTextChunkPrompt = ai.definePrompt({
   name: 'generateFlashcardsFromTextChunkPrompt',
   input: { schema: z.object({ textChunk: z.string() }) },
-  output: { schema: z.array(FlashcardSchema) }, // Output is an array of flashcards
+  output: { schema: z.array(FlashcardSchema) }, 
   prompt: `You are an AI assistant specialized in creating high-quality educational flashcards.
 You are processing a segment of a larger document. Your task is to analyze the following text chunk and generate flashcards *only* from the content within this specific chunk.
 
@@ -87,7 +91,7 @@ const pdfToFlashcardFlow = ai.defineFlow(
   {
     name: 'pdfToFlashcardFlow',
     inputSchema: PdfToFlashcardInputSchema,
-    outputSchema: PdfToFlashcardOutputSchema, // This is z.array(FlashcardSchema)
+    outputSchema: PdfToFlashcardOutputSchema, 
   },
   async (input: PdfToFlashcardInput): Promise<PdfToFlashcardOutput> => {
     // Step 1: Extract all text content using the tool.
@@ -95,11 +99,11 @@ const pdfToFlashcardFlow = ai.defineFlow(
 
     if (!fullText || fullText.trim() === "" || fullText.toLowerCase().includes("no textual content could be extracted")) {
       console.log("No text extracted or PDF unreadable.");
-      return [];
+      return { flashcards: [], extractedText: fullText || "No textual content could be extracted from the PDF." };
     }
 
     // Step 2: Chunk the extracted text.
-    const MAX_CHUNK_CHAR_LENGTH = 20000; // Adjusted for typical prompt limits and performance
+    const MAX_CHUNK_CHAR_LENGTH = 20000; 
     const textChunks: string[] = [];
     if (fullText.length > MAX_CHUNK_CHAR_LENGTH) {
       for (let i = 0; i < fullText.length; i += MAX_CHUNK_CHAR_LENGTH) {
@@ -109,8 +113,7 @@ const pdfToFlashcardFlow = ai.defineFlow(
       textChunks.push(fullText);
     }
     
-
-    let allFlashcards: PdfToFlashcardOutput = [];
+    let allFlashcards: FlashcardCore[] = [];
 
     // Step 3: Process each chunk to generate flashcards.
     for (const chunk of textChunks) {
@@ -123,11 +126,11 @@ const pdfToFlashcardFlow = ai.defineFlow(
         }
       } catch (error) {
         console.error("Error processing a text chunk for flashcards:", error);
-        // Optionally, decide if you want to stop or continue with other chunks
       }
     }
     
-    // Ensure output is always an array, even if null/undefined from LLM or empty
-    return allFlashcards || [];
+    return { flashcards: allFlashcards || [], extractedText: fullText };
   }
 );
+
+type FlashcardCore = z.infer<typeof FlashcardSchema>;

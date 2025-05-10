@@ -5,11 +5,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { textToFlashcard, type TextToFlashcardInput } from '@/ai/flows/text-to-flashcard';
-import type { FlashcardCore } from '@/types/flashcard';
+import type { GenerationResult } from '@/app/page';
 import { Pilcrow } from 'lucide-react';
 
 interface TextInputProps {
-  onFlashcardsGenerated: (flashcards: FlashcardCore[]) => void;
+  onFlashcardsGenerated: (result: GenerationResult) => void;
   setIsLoading: (isLoading: boolean) => void;
   isLoading: boolean;
 }
@@ -27,19 +27,19 @@ export default function TextInput({ onFlashcardsGenerated, setIsLoading, isLoadi
     setIsLoading(true);
     try {
       const input: TextToFlashcardInput = { text };
-      const result = await textToFlashcard(input);
+      const result = await textToFlashcard(input); // result is { flashcards: FlashcardCore[] }
       
       if (result.flashcards && result.flashcards.length > 0) {
-        onFlashcardsGenerated(result.flashcards);
+        onFlashcardsGenerated({ flashcards: result.flashcards, sourceContext: { text: text } });
         toast({ title: "Success!", description: `${result.flashcards.length} flashcards generated from text.` });
       } else {
+        onFlashcardsGenerated({ flashcards: [], sourceContext: { text: text } });
         toast({ title: "No flashcards generated", description: "Could not find information to create flashcards from the text." });
-        onFlashcardsGenerated([]);
       }
     } catch (error) {
       console.error("Error generating flashcards from text:", error);
+      onFlashcardsGenerated({ flashcards: [], sourceContext: { text: text } });
       toast({ title: "Error", description: "Failed to generate flashcards from text. Please try again.", variant: "destructive" });
-      onFlashcardsGenerated([]);
     } finally {
       setIsLoading(false);
       setText('');

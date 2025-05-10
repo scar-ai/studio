@@ -5,12 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { readFileAsDataURL } from '@/lib/fileReader';
-import { pdfToFlashcard, type PdfToFlashcardInput } from '@/ai/flows/pdf-to-flashcard';
-import type { FlashcardCore } from '@/types/flashcard';
+import { pdfToFlashcard, type PdfToFlashcardInput, type PdfToFlashcardOutput } from '@/ai/flows/pdf-to-flashcard';
+import type { GenerationResult } from '@/app/page';
 import { FileText } from 'lucide-react';
 
 interface PdfInputProps {
-  onFlashcardsGenerated: (flashcards: FlashcardCore[]) => void;
+  onFlashcardsGenerated: (result: GenerationResult) => void;
   setIsLoading: (isLoading: boolean) => void;
   isLoading: boolean;
 }
@@ -35,22 +35,23 @@ export default function PdfInput({ onFlashcardsGenerated, setIsLoading, isLoadin
     }
 
     setIsLoading(true);
+    let result: PdfToFlashcardOutput | null = null;
     try {
       const pdfDataUri = await readFileAsDataURL(selectedFile);
       const input: PdfToFlashcardInput = { pdfDataUri };
-      const result = await pdfToFlashcard(input); // Output is PdfToFlashcardOutput which is FlashcardCore[]
+      result = await pdfToFlashcard(input); 
       
-      if (result && result.length > 0) {
-        onFlashcardsGenerated(result);
-        toast({ title: "Success!", description: `${result.length} flashcards generated from PDF.` });
+      if (result.flashcards && result.flashcards.length > 0) {
+        onFlashcardsGenerated({ flashcards: result.flashcards, sourceContext: { text: result.extractedText } });
+        toast({ title: "Success!", description: `${result.flashcards.length} flashcards generated from PDF.` });
       } else {
-        toast({ title: "No flashcards generated", description: "Could not find information to create flashcards from the PDF." });
-        onFlashcardsGenerated([]);
+        onFlashcardsGenerated({ flashcards: [], sourceContext: { text: result.extractedText } });
+        toast({ title: "No flashcards generated", description: "Could not find information to create flashcards from the PDF. The extracted text was still passed as context." });
       }
     } catch (error) {
       console.error("Error generating flashcards from PDF:", error);
+      onFlashcardsGenerated({ flashcards: [], sourceContext: { text: result?.extractedText || "Error extracting text or processing PDF." } });
       toast({ title: "Error", description: "Failed to generate flashcards from PDF. Please try again.", variant: "destructive" });
-      onFlashcardsGenerated([]);
     } finally {
       setIsLoading(false);
       setSelectedFile(null);

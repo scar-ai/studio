@@ -6,11 +6,11 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { readFileAsDataURL } from '@/lib/fileReader';
 import { imageToFlashcard, type ImageToFlashcardInput } from '@/ai/flows/image-to-flashcard';
-import type { FlashcardCore } from '@/types/flashcard';
+import type { GenerationResult } from '@/app/page';
 import { UploadCloud } from 'lucide-react';
 
 interface ImageInputProps {
-  onFlashcardsGenerated: (flashcards: FlashcardCore[]) => void;
+  onFlashcardsGenerated: (result: GenerationResult) => void;
   setIsLoading: (isLoading: boolean) => void;
   isLoading: boolean;
 }
@@ -35,26 +35,27 @@ export default function ImageInput({ onFlashcardsGenerated, setIsLoading, isLoad
     }
 
     setIsLoading(true);
+    let photoDataUri = '';
     try {
-      const photoDataUri = await readFileAsDataURL(selectedFile);
+      photoDataUri = await readFileAsDataURL(selectedFile);
       const input: ImageToFlashcardInput = { photoDataUri };
       const result = await imageToFlashcard(input);
       
       if (result.flashcards && result.flashcards.length > 0) {
-        onFlashcardsGenerated(result.flashcards);
+        onFlashcardsGenerated({ flashcards: result.flashcards, sourceContext: { imageUri: photoDataUri } });
         toast({ title: "Success!", description: `${result.flashcards.length} flashcards generated from image.` });
       } else {
+        onFlashcardsGenerated({ flashcards: [], sourceContext: { imageUri: photoDataUri } });
         toast({ title: "No flashcards generated", description: "Could not find information to create flashcards from the image." });
-        onFlashcardsGenerated([]);
       }
     } catch (error) {
       console.error("Error generating flashcards from image:", error);
+      // Pass photoDataUri even in case of error if available, so AI can still potentially use it.
+      onFlashcardsGenerated({ flashcards: [], sourceContext: photoDataUri ? { imageUri: photoDataUri } : undefined });
       toast({ title: "Error", description: "Failed to generate flashcards from image. Please try again.", variant: "destructive" });
-       onFlashcardsGenerated([]);
     } finally {
       setIsLoading(false);
       setSelectedFile(null); 
-      // Reset file input visually (this is a common trick)
       const fileInput = document.getElementById('image-upload') as HTMLInputElement;
       if (fileInput) fileInput.value = "";
     }

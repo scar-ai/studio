@@ -4,11 +4,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ImageInput from "./ImageInput";
 import PdfInput from "./PdfInput";
 import TextInput from "./TextInput";
-import type { FlashcardCore } from '@/types/flashcard';
+import type { GenerationResult } from '@/app/page'; // Updated import
 import { Image as ImageIcon, FileText, Type } from 'lucide-react';
 
 interface InputAreaProps {
-  onFlashcardsGenerated: (flashcards: FlashcardCore[]) => void;
+  onFlashcardsGenerated: (result: GenerationResult) => void; // Updated type
   setIsLoading: (isLoading: boolean) => void;
   isLoading: boolean;
 }
