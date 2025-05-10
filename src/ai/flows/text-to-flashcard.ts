@@ -32,27 +32,16 @@ export async function textToFlashcard(input: TextToFlashcardInput): Promise<Text
 
 const createFlashcardsTool = ai.defineTool({
   name: 'createFlashcards',
-  description: 'Create questions and answers from a given text. If mathematical expressions are present, format them using LaTeX: $inline_math$ for inline and $$block_math$$ for block.',
+  description: 'Extracts the most important concepts, key information, and significant details from the provided text to generate educationally valuable question/answer pairs. Prioritize core learning objectives and avoid trivial or overly specific details. If mathematical expressions are present, format them using LaTeX: $inline_math$ for inline and $$block_math$$ for block.',
   inputSchema: z.object({
     text: z.string().describe('The text to generate flashcards from.'),
   }),
   outputSchema: z.array(FlashcardSchema),
   async resolve(input) {
-    // Replace with actual implementation to generate flashcards from text
-    // This is a placeholder implementation
-    // The actual LLM call using this tool would be responsible for LaTeX formatting.
-    const { text } = input;
-    const flashcards = [];
-    const sentences = text.split(/[\.!\?]/);
-    for (const sentence of sentences) {
-      if (sentence.trim() !== '') {
-        flashcards.push({
-          question: `What is the main idea of this: ${sentence.trim()}?`,
-          answer: sentence.trim(),
-        });
-      }
-    }
-    return flashcards;
+    // This placeholder is not executed by the LLM.
+    // The LLM uses the tool's name, description, and schemas to understand its function.
+    // The actual flashcard generation based on the text and prompt instructions happens within the LLM call.
+    return [];
   },
 });
 
@@ -61,15 +50,20 @@ const prompt = ai.definePrompt({
   input: {schema: TextToFlashcardInputSchema},
   output: {schema: TextToFlashcardOutputSchema},
   tools: [createFlashcardsTool],
-  prompt: `You are a flashcard generator. You will generate flashcards from the given text.
+  prompt: `You are an AI assistant specialized in creating high-quality, educationally valuable flashcards from text.
+Your goal is to identify and extract the most important concepts, key definitions, significant facts, and core ideas presented in the text.
+
 When generating flashcard questions or answers that involve mathematical expressions or formulas, please use LaTeX format.
 - For inline mathematics, use single dollar signs: \`$your_latex_code$\` (e.g., \`$E=mc^2$\`).
 - For display/block mathematics, use double dollar signs: \`$$your_latex_code$$\` (e.g., \`$$\sum_{i=1}^n i = \frac{n(n+1)}{2}$$\`).
 Ensure the LaTeX code is valid.
 
-The text is: {{{text}}}
+Focus on information that is crucial for understanding the subject matter. Avoid creating flashcards for trivial details, examples unless they illustrate a key concept, or overly specific data points unless they are fundamental. The flashcards should help a student learn and remember the most essential parts of the text.
 
-Use the createFlashcards tool to generate questions and answers from the given text.
+The text is:
+{{{text}}}
+
+Use the createFlashcards tool to analyze the text and generate flashcards according to these instructions.
 Return the flashcards in the following JSON format:
 {{output}}
   `,
@@ -83,9 +77,7 @@ const textToFlashcardFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
-    // Ensure output is not null, if it can be based on your Genkit setup or prompt behavior
     if (!output) {
-      // Handle the case where output might be null, e.g., by returning empty flashcards or throwing an error
       console.warn("AI did not return flashcards for the text-to-flashcard flow.");
       return { flashcards: [] }; 
     }

@@ -36,7 +36,7 @@ export async function imageToFlashcard(input: ImageToFlashcardInput): Promise<Im
 
 const extractConceptsTool = ai.defineTool({
   name: 'extractConcepts',
-  description: 'Extract key concepts and generate question/answer pairs from an image of notes. If mathematical expressions are present, format them using LaTeX: $inline_math$ for inline and $$block_math$$ for block.',
+  description: 'Extracts the most important concepts, key information, and significant details from an image of notes to generate educationally valuable question/answer pairs. Prioritize core learning objectives and avoid trivial or overly specific details. If mathematical expressions are present, format them using LaTeX: $inline_math$ for inline and $$block_math$$ for block.',
   inputSchema: z.object({
     photoDataUri: z
       .string()
@@ -47,21 +47,10 @@ const extractConceptsTool = ai.defineTool({
   outputSchema: z.array(FlashcardSchema),
 },
 async (input) => {
-    const {photoDataUri} = input;
-    // Placeholder implementation for concept extraction from image
-    // In a real application, this would involve OCR and NLP techniques
-    // to identify key concepts and generate relevant questions and answers.
-    // The actual LLM call using this tool would be responsible for LaTeX formatting.
-    return [
-      {
-        question: 'What is the main topic discussed in the notes?',
-        answer: 'The main topic is not yet implemented.',
-      },
-      {
-        question: 'Can you summarize the key points?',
-        answer: 'Key point extraction is not yet implemented.',
-      },
-    ];
+    // This placeholder is not executed by the LLM. 
+    // The LLM uses the tool's name, description, and schemas to understand its function.
+    // The actual flashcard generation based on the image and prompt instructions happens within the LLM call.
+    return []; 
   }
 );
 
@@ -70,13 +59,17 @@ const imageToFlashcardPrompt = ai.definePrompt({
   tools: [extractConceptsTool],
   input: {schema: ImageToFlashcardInputSchema},
   output: {schema: ImageToFlashcardOutputSchema},
-  prompt: `You are an AI assistant designed to help students create flashcards from their notes.
+  prompt: `You are an AI assistant specialized in creating high-quality, educationally valuable flashcards from images of notes.
+Your goal is to identify and extract the most important concepts, key definitions, significant facts, and core ideas presented in the image.
+
 When generating flashcard questions or answers that involve mathematical expressions or formulas, please use LaTeX format.
 - For inline mathematics, use single dollar signs: \`$your_latex_code$\` (e.g., \`$E=mc^2$\`).
 - For display/block mathematics, use double dollar signs: \`$$your_latex_code$$\` (e.g., \`$$\sum_{i=1}^n i = \frac{n(n+1)}{2}$$\`).
 Ensure the LaTeX code is valid.
 
-Please use the extractConcepts tool to extract the flashcards from the image.
+Focus on information that is crucial for understanding the subject matter. Avoid creating flashcards for trivial details, examples unless they illustrate a key concept, or overly specific data points unless they are fundamental. The flashcards should help a student learn and remember the most essential parts of the notes.
+
+Please use the extractConcepts tool to analyze the image and generate flashcards according to these instructions.
 
 Image: {{media url=photoDataUri}}
   `,
@@ -90,6 +83,10 @@ const imageToFlashcardFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await imageToFlashcardPrompt(input);
-    return output!;
+    if (!output) {
+      console.warn("AI did not return flashcards for the image-to-flashcard flow.");
+      return { flashcards: [] };
+    }
+    return output;
   }
 );

@@ -68,8 +68,8 @@ const generateFlashcardsFromTextChunkPrompt = ai.definePrompt({
   name: 'generateFlashcardsFromTextChunkPrompt',
   input: { schema: z.object({ textChunk: z.string() }) },
   output: { schema: z.array(FlashcardSchema) }, 
-  prompt: `You are an AI assistant specialized in creating high-quality educational flashcards.
-You are processing a segment of a larger document. Your task is to analyze the following text chunk and generate flashcards *only* from the content within this specific chunk.
+  prompt: `You are an AI assistant specialized in creating high-quality, educationally valuable flashcards.
+You are processing a segment of a larger document. Your task is to analyze the following text chunk and generate flashcards focusing *only* on the most important concepts, key definitions, significant facts, and core ideas presented *within this specific chunk*.
 
 When generating flashcard questions or answers that involve mathematical expressions or formulas, please use LaTeX format.
 - For inline mathematics, use single dollar signs: \`$your_latex_code$\` (e.g., \`$E=mc^2$\`).
@@ -79,14 +79,14 @@ Ensure the LaTeX code is valid.
 Text Chunk:
 {{{textChunk}}}
 
-Carefully analyze this text to identify key concepts, important facts, definitions, and main ideas *within this chunk*.
-Create a series of question-and-answer flashcards based *only* on this provided text chunk.
-- Questions should be clear and test understanding of the material in this chunk.
-- Answers should be concise, accurate, and directly derived from this chunk.
+Carefully analyze this text chunk. Prioritize information that is crucial for understanding the subject matter of this chunk. Avoid creating flashcards for trivial details, examples unless they illustrate a key concept, or overly specific data points unless they are fundamental to this chunk's topic. The flashcards should help a student learn and remember the most essential parts of this section of the document.
+
+- Questions should be clear and test understanding of the key material in this chunk.
+- Answers should be concise, accurate, and directly derived from this chunk, reflecting the most important information.
 - Do NOT create flashcards about the PDF file itself, its format, how it was provided, or the tools used.
-- Focus solely on the informational content *within* the provided text chunk.
-- If no relevant content is found in this chunk to create flashcards, return an empty array.
-- Generate the flashcards in the language of the provided pdf
+- Focus solely on the informational content *within* the provided text chunk that holds the most educational value.
+- If no relevant, important content is found in this chunk to create flashcards, return an empty array.
+- Generate the flashcards in the language of the provided pdf.
 
 Output the flashcards as a JSON array of objects, where each object has a 'question' and 'answer' field.`,
 });
