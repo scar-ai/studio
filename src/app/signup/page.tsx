@@ -2,24 +2,61 @@
 "use client";
 
 import AuthForm from '@/components/auth/AuthForm';
-import { auth, GoogleAuthProvider } from '@/lib/firebase/firebase';
-import { createUserWithEmailAndPassword, signInWithPopup } from "firebase/auth";
+import { auth, GoogleAuthProvider, getRedirectResult } from '@/lib/firebase/firebase';
+import { createUserWithEmailAndPassword, signInWithRedirect } from "firebase/auth";
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { useEffect, useState } from 'react';
+import LoadingSpinner from '@/components/cardify/LoadingSpinner';
 
 export default function SignUpPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isProcessingRedirect, setIsProcessingRedirect] = useState(true);
 
   useEffect(() => {
-    if (!authLoading && user) {
+    const handleRedirect = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result) {
+          // User signed in via redirect.
+          // The useAuth().user state will update via onAuthStateChanged.
+          // The useEffect below watching `user` will handle redirection to '/'.
+          toast({
+            title: "Sign Up Successful",
+            description: `Welcome to Cardify, ${result.user.displayName || result.user.email}!`,
+          });
+        }
+      } catch (error: any) {
+        console.error("Google redirect sign-up error: ", error);
+        let errorMessage = "Could not complete sign-up with Google. Please try again.";
+        if (error.code === 'auth/account-exists-with-different-credential') {
+          errorMessage = "An account already exists with this email using a different sign-in method. Please try logging in.";
+        } else if (error.code === 'auth/network-request-failed') {
+          errorMessage = "Network error. Please check your connection.";
+        } else if (error.code === 'auth/cancelled-popup-request' || error.code === 'auth/popup-closed-by-user') {
+           errorMessage = "Google Sign-Up was cancelled or interrupted. Please try again.";
+        }
+        toast({
+          variant: "destructive",
+          title: "Google Sign-Up Error",
+          description: errorMessage,
+        });
+      } finally {
+        setIsProcessingRedirect(false);
+      }
+    };
+    handleRedirect();
+  }, [toast]);
+
+  useEffect(() => {
+    if (!authLoading && !isProcessingRedirect && user) {
       router.replace('/'); 
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, isProcessingRedirect, router]);
 
   const handleSignUp = async (values: { email: string; password: string }) => {
     try {
@@ -45,36 +82,25 @@ export default function SignUpPage() {
     setIsGoogleLoading(true);
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
-      toast({
-        title: "Sign Up Successful",
-        description: "Welcome to Cardify! You're now signed in.",
-      });
-      // router.push('/'); // REMOVED: Rely on useEffect watching 'user' state for navigation
+      await signInWithRedirect(auth, provider);
+      // Result handled by getRedirectResult
     } catch (error: any) {
-      console.error("Google sign up error: ", error);
-      let errorMessage = "Could not sign up with Google. Please try again.";
-       if (error.code === 'auth/popup-closed-by-user') {
-        errorMessage = "Sign-up popup closed. Please try again if you wish to sign up with Google.";
-      } else if (error.code === 'auth/account-exists-with-different-credential') {
-        errorMessage = "An account already exists with this email using a different sign-in method. Please try logging in.";
-      } else if (error.code === 'auth/network-request-failed') {
-        errorMessage = "Network error. Please check your connection and try again.";
-      }
+      console.error("Google sign up initiation error: ", error);
       toast({
         variant: "destructive",
         title: "Google Sign-Up Error",
-        description: errorMessage,
+        description: "Could not start Google Sign-Up. Please check your connection and try again.",
       });
-    } finally {
       setIsGoogleLoading(false);
     }
   };
 
-  if (authLoading || (!authLoading && user)) {
-    // This ensures that if the user is already logged in or auth is still loading,
-    // we don't render the form. The useEffect above will handle redirection.
-    return null; 
+  if (authLoading || isProcessingRedirect || (!authLoading && user)) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-primary/30 to-background">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
   }
 
   return (

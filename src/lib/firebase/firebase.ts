@@ -1,6 +1,6 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
-import { getAuth, type Auth, GoogleAuthProvider } from "firebase/auth"; // Added GoogleAuthProvider
+import { getAuth, type Auth, GoogleAuthProvider, getRedirectResult } from "firebase/auth"; // Added GoogleAuthProvider and getRedirectResult
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -100,4 +100,4 @@ if (app) {
 }
 
 
-export { app, auth, GoogleAuthProvider }; // Exported GoogleAuthProvider
+export { app, auth, GoogleAuthProvider, getRedirectResult }; // Exported GoogleAuthProvider and getRedirectResult
