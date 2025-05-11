@@ -36,27 +36,32 @@ export async function middleware(request: NextRequest) {
   );
 
   const { data: { session } } = await supabase.auth.getSession();
-
   const { pathname } = request.nextUrl;
 
-  // Define public paths (accessible without authentication)
   const publicPaths = ['/login', '/signup', '/auth/callback', '/landing'];
 
-  // If user is not authenticated and trying to access a protected route
-  if (!session && !publicPaths.some(path => pathname.startsWith(path))) {
-    // Allow API routes for Genkit or other specific non-auth-gated API calls
-    if (pathname.startsWith('/api/')) {
-        return response;
-    }
-    // Redirect to landing page if not authenticated and not accessing a public path
-    return NextResponse.redirect(new URL('/landing', request.url));
-  }
-
-  // If user is authenticated and trying to access login, signup page or landing page
+  // Rule 1: Authenticated user trying to access public auth/landing pages
+  // If user is authenticated and trying to access login, signup page or landing page, redirect to home ('/')
   if (session && (pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/landing'))) {
     return NextResponse.redirect(new URL('/', request.url));
   }
+
+  // Rule 2: Unauthenticated user
+  if (!session) {
+    const isPublicPage = publicPaths.some(path => pathname.startsWith(path));
+    const isApiRoute = pathname.startsWith('/api/');
+
+    if (isPublicPage || isApiRoute) {
+      // Allow access to public pages and API routes
+      return response;
+    } else {
+      // For all other paths (including root '/' or any other protected route), redirect to landing
+      return NextResponse.redirect(new URL('/landing', request.url));
+    }
+  }
   
+  // Rule 3: Authenticated user on a non-auth/landing page (e.g., '/', '/decks')
+  // Or any other case not covered (should be minimal, e.g. authenticated user on a protected route)
   return response;
 }
 
