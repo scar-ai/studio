@@ -1,67 +1,84 @@
 "use client";
 
-import type { User as FirebaseUser, IdTokenResult } from "firebase/auth";
+import type { User as SupabaseUser, Session } from "@supabase/supabase-js";
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { auth } from '@/lib/firebase/firebase';
-import { onAuthStateChanged, signOut as firebaseSignOut } from "firebase/auth";
+import { supabase } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import LoadingSpinner from "@/components/cardify/LoadingSpinner";
+import { useToast } from "@/hooks/use-toast";
 
 interface AuthContextType {
-  user: FirebaseUser | null;
+  user: SupabaseUser | null;
+  session: Session | null;
   loading: boolean;
   logout: () => Promise<void>;
-  idTokenResult: IdTokenResult | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [idTokenResult, setIdTokenResult] = useState<IdTokenResult | null>(null);
   const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        console.log("AuthContext: User state changed. Current User ID:", currentUser.uid, "Email:", currentUser.email, "Provider:", currentUser.providerData.map(p => p.providerId).join(', '));
-        setUser(currentUser);
-        try {
-          const tokenResult = await currentUser.getIdTokenResult();
-          setIdTokenResult(tokenResult);
-        } catch (error) {
-          console.error("AuthContext: Error getting ID token result:", error);
-          setIdTokenResult(null); // Clear previous token result on error
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log(`AuthContext: Supabase auth event: ${event}`);
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+
+        if (event === 'SIGNED_IN') {
+          // Optionally, redirect on sign-in if not already on the main page
+          // router.push('/'); 
+        } else if (event === 'SIGNED_OUT') {
+          // router.push('/login'); // Already handled by logout function
         }
-      } else {
-        console.log("AuthContext: User state changed. No current user.");
-        setUser(null);
-        setIdTokenResult(null);
+      }
+    );
+
+    // Check initial session
+    const getInitialSession = async () => {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error("AuthContext: Error getting initial session:", error);
+      }
+      if (data.session) {
+        setSession(data.session);
+        setUser(data.session.user);
       }
       setLoading(false);
-    });
+    };
+    getInitialSession();
 
-    return () => unsubscribe();
+
+    return () => {
+      authListener?.unsubscribe();
+    };
   }, []);
 
   const logout = async () => {
-    try {
-      await firebaseSignOut(auth);
-      // setUser(null) and setIdTokenResult(null) will be handled by onAuthStateChanged
-      console.log("AuthContext: Logout successful.");
-      router.push('/login');
-    } catch (error) {
+    setLoading(true);
+    const { error } = await supabase.auth.signOut();
+    if (error) {
       console.error("AuthContext: Error signing out: ", error);
-      toast({ // Assuming useToast is available or can be imported if needed here
+      toast({
           variant: "destructive",
           title: "Logout Failed",
-          description: "An error occurred while signing out. Please try again.",
+          description: error.message || "An error occurred while signing out. Please try again.",
       });
+    } else {
+      console.log("AuthContext: Logout successful.");
+      // setUser(null) and setSession(null) will be handled by onAuthStateChange
+      router.push('/login');
     }
+    setLoading(false);
   };
   
-  if (loading && !user) { // Keep showing spinner if loading and no user yet. If user exists, content can render.
+  if (loading) { 
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <LoadingSpinner size="lg" />
@@ -69,9 +86,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     );
   }
 
-
   return (
-    <AuthContext.Provider value={{ user, loading, logout, idTokenResult }}>
+    <AuthContext.Provider value={{ user, session, loading, logout }}>
       {children}
     </AuthContext.Provider>
   );
@@ -84,10 +100,3 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
-
-// Helper for toast, assuming it might be used in logout.
-// If AuthProvider is strictly for context, toast calls should remain in components.
-// For simplicity, I'll remove direct toast usage from here to avoid import complexities if not already set up.
-// The console.error in logout is the primary feedback here.
-// import { toast } from '@/hooks/use-toast'; 
-// This line would be needed if toast was used directly above.

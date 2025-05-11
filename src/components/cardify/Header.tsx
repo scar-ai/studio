@@ -1,6 +1,6 @@
 "use client";
 
-import { Sparkles, LogOut, UserCircle } from 'lucide-react';
+import { Sparkles, LogOut } from 'lucide-react'; // Removed UserCircle as Avatar is used
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,8 +19,18 @@ export default function Header() {
   const getInitials = (email?: string | null) => {
     if (!email) return "U";
     const parts = email.split('@')[0];
-    return parts.substring(0, 2).toUpperCase();
+    // Ensure at least one character, and max two for initials
+    if (parts.length >= 2) return parts.substring(0, 2).toUpperCase();
+    if (parts.length === 1) return parts.substring(0, 1).toUpperCase();
+    return email.substring(0,1).toUpperCase() || "U"; // Fallback if split results in empty string
   }
+  
+  const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0];
+  const userEmail = user?.email;
+  // Supabase might store profile picture URL in user_metadata.avatar_url or similar.
+  // For now, we'll stick to initials.
+  // const avatarUrl = user?.user_metadata?.avatar_url; 
+
 
   return (
     <header className="bg-primary shadow-md">
@@ -35,10 +45,9 @@ export default function Header() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0">
                   <Avatar className="h-10 w-10 border-2 border-primary-foreground/50">
-                    {/* You can add an AvatarImage here if you store user profile pictures */}
-                    {/* <AvatarImage src={user.photoURL || undefined} alt={user.displayName || user.email || "User"} /> */}
+                    {/* <AvatarImage src={avatarUrl || undefined} alt={displayName || userEmail || "User"} /> */}
                     <AvatarFallback className="bg-accent text-accent-foreground font-semibold">
-                      {getInitials(user.email)}
+                      {getInitials(userEmail)}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
@@ -47,11 +56,13 @@ export default function Header() {
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium leading-none text-foreground">
-                      {user.displayName || user.email?.split('@')[0]}
+                      {displayName}
                     </p>
-                    <p className="text-xs leading-none text-muted-foreground">
-                      {user.email}
-                    </p>
+                    {userEmail && (
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {userEmail}
+                      </p>
+                    )}
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
@@ -61,6 +72,11 @@ export default function Header() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+          )}
+           {!loading && !user && (
+            <Button variant="outline" onClick={() => window.location.href = '/login'}>
+              Log In
+            </Button>
           )}
         </div>
       </div>
