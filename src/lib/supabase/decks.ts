@@ -1,8 +1,7 @@
 // src/lib/supabase/decks.ts
 'use server';
 
-import { supabase } from '@/lib/supabase/client'; // Using client for server actions requires care, or a server client
-import type { Deck, StoredFlashcard, FlashcardCore } from '@/types/flashcard';
+import type { Deck, StoredFlashcard } from '@/types/flashcard';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
@@ -34,11 +33,13 @@ export async function createDeck(
   sourceMaterial: { text?: string; imageUri?: string } | null
 ): Promise<Deck> {
   const supabase = createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: userData, error: userError } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (userError || !userData?.user) {
+    console.error('Error getting user in createDeck:', userError);
     throw new Error('User not authenticated');
   }
+  const user = userData.user;
 
   const newDeckData = {
     user_id: user.id,
@@ -67,12 +68,13 @@ export async function createDeck(
 
 export async function getDecksForUser(): Promise<Deck[]> {
   const supabase = createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: userData, error: userError } = await supabase.auth.getUser();
 
-  if (!user) {
-    console.warn('getDecksForUser: User not authenticated, returning empty array.');
+  if (userError || !userData?.user) {
+    console.warn('getDecksForUser: User not authenticated or error fetching user. Returning empty array.', userError);
     return [];
   }
+  const user = userData.user;
 
   const { data, error } = await supabase
     .from('decks')
@@ -89,11 +91,13 @@ export async function getDecksForUser(): Promise<Deck[]> {
 
 export async function getDeckById(deckId: string): Promise<Deck | null> {
   const supabase = createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: userData, error: userError } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (userError || !userData?.user) {
+    console.error('Error getting user in getDeckById:', userError);
     throw new Error('User not authenticated');
   }
+  const user = userData.user;
 
   const { data, error } = await supabase
     .from('decks')
@@ -114,11 +118,13 @@ export async function getDeckById(deckId: string): Promise<Deck | null> {
 
 export async function deleteDeckById(deckId: string): Promise<{ success: boolean; error?: string }> {
   const supabase = createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: userData, error: userError } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (userError || !userData?.user) {
+    console.error('Error getting user in deleteDeckById:', userError);
     return { success: false, error: 'User not authenticated' };
   }
+  const user = userData.user;
 
   const { error } = await supabase
     .from('decks')
@@ -135,11 +141,13 @@ export async function deleteDeckById(deckId: string): Promise<{ success: boolean
 
 export async function updateDeckName(deckId: string, newName: string): Promise<Deck> {
   const supabase = createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: userData, error: userError } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (userError || !userData?.user) {
+    console.error('Error getting user in updateDeckName:', userError);
     throw new Error('User not authenticated');
   }
+  const user = userData.user;
 
   const { data, error } = await supabase
     .from('decks')
