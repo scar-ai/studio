@@ -1,3 +1,4 @@
+
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
@@ -47,6 +48,7 @@ export async function middleware(request: NextRequest) {
     if (pathname.startsWith('/api/')) {
         return response;
     }
+    // Redirect to landing page if not authenticated and not accessing a public path
     return NextResponse.redirect(new URL('/landing', request.url));
   }
 
