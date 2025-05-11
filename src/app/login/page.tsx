@@ -2,12 +2,12 @@
 "use client";
 
 import AuthForm from '@/components/auth/AuthForm';
-import { auth, GoogleAuthProvider } from '@/lib/firebase/firebase'; // Added GoogleAuthProvider
-import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth"; // Added signInWithPopup
+import { auth, GoogleAuthProvider } from '@/lib/firebase/firebase';
+import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { useEffect, useState } from 'react'; // Added useState
+import { useEffect, useState } from 'react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,7 +29,7 @@ export default function LoginPage() {
         title: "Login Successful",
         description: "Welcome back!",
       });
-      router.push('/');
+      // router.push('/'); // Rely on useEffect for navigation
     } catch (error: any) {
       console.error("Login error: ", error);
       let errorMessage = "Failed to log in. Please check your credentials.";
@@ -49,7 +49,7 @@ export default function LoginPage() {
         title: "Login Successful",
         description: "Signed in with Google successfully!",
       });
-      router.push('/'); // Corrected: Redirect to home page after successful Google login
+      // router.push('/'); // REMOVED: Rely on useEffect watching 'user' state for navigation
     } catch (error: any) {
       console.error("Google login error: ", error);
       let errorMessage = "Could not sign in with Google. Please try again.";
@@ -71,6 +71,8 @@ export default function LoginPage() {
   };
   
   if (authLoading || (!authLoading && user)) {
+    // This ensures that if the user is already logged in or auth is still loading,
+    // we don't render the form. The useEffect above will handle redirection.
     return null; 
   }
 
@@ -87,3 +89,4 @@ export default function LoginPage() {
     />
   );
 }
+

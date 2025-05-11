@@ -1,12 +1,13 @@
+
 "use client";
 
 import AuthForm from '@/components/auth/AuthForm';
-import { auth, GoogleAuthProvider } from '@/lib/firebase/firebase'; // Added GoogleAuthProvider
-import { createUserWithEmailAndPassword, signInWithPopup } from "firebase/auth"; // Added signInWithPopup
+import { auth, GoogleAuthProvider } from '@/lib/firebase/firebase';
+import { createUserWithEmailAndPassword, signInWithPopup } from "firebase/auth";
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { useEffect, useState } from 'react'; // Added useState
+import { useEffect, useState } from 'react';
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -49,15 +50,13 @@ export default function SignUpPage() {
         title: "Sign Up Successful",
         description: "Welcome to Cardify! You're now signed in.",
       });
-      router.push('/'); // Redirect to home page after successful Google signup/signin
+      // router.push('/'); // REMOVED: Rely on useEffect watching 'user' state for navigation
     } catch (error: any) {
       console.error("Google sign up error: ", error);
       let errorMessage = "Could not sign up with Google. Please try again.";
        if (error.code === 'auth/popup-closed-by-user') {
         errorMessage = "Sign-up popup closed. Please try again if you wish to sign up with Google.";
       } else if (error.code === 'auth/account-exists-with-different-credential') {
-        // This error means the user probably tried to sign up with Google using an email
-        // that is already registered with email/password. We should guide them to log in.
         errorMessage = "An account already exists with this email using a different sign-in method. Please try logging in.";
       } else if (error.code === 'auth/network-request-failed') {
         errorMessage = "Network error. Please check your connection and try again.";
@@ -73,6 +72,8 @@ export default function SignUpPage() {
   };
 
   if (authLoading || (!authLoading && user)) {
+    // This ensures that if the user is already logged in or auth is still loading,
+    // we don't render the form. The useEffect above will handle redirection.
     return null; 
   }
 
@@ -90,3 +91,4 @@ export default function SignUpPage() {
     />
   );
 }
+
