@@ -5,10 +5,15 @@ import Header from '@/components/cardify/Header';
 import InputArea from '@/components/cardify/InputArea';
 import FlashcardReview from '@/components/cardify/FlashcardReview';
 import LoadingSpinner from '@/components/cardify/LoadingSpinner';
-import type { FlashcardCore, AppFlashcardClient } from '@/types/flashcard';
+import SaveDeckDialog from '@/components/cardify/SaveDeckDialog';
+import type { FlashcardCore, AppFlashcardClient, StoredFlashcard } from '@/types/flashcard';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Save } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
+import { createDeck } from '@/lib/supabase/decks';
 
 export interface GenerationResult {
   flashcards: FlashcardCore[];
@@ -17,12 +22,16 @@ export interface GenerationResult {
 
 export default function HomePage() {
   const [flashcards, setFlashcards] = useState<AppFlashcardClient[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // For flashcard generation
   const [isClient, setIsClient] = useState(false);
   const [sourceMaterial, setSourceMaterial] = useState<{text?: string; imageUri?: string} | null>(null);
+  
+  const [isSaveDeckDialogOpen, setIsSaveDeckDialogOpen] = useState(false);
+  const [isSavingDeck, setIsSavingDeck] = useState(false);
 
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     setIsClient(true); 
@@ -44,11 +53,40 @@ export default function HomePage() {
     }));
     setFlashcards(newFlashcards);
     setSourceMaterial(result.sourceContext || null);
+    // Reset deck saved status if new cards are generated
   };
 
+  const handleSaveDeck = async (deckName: string) => {
+    if (!user) {
+      toast({ title: "Authentication Error", description: "You must be logged in to save a deck.", variant: "destructive" });
+      return;
+    }
+    if (flashcards.length === 0) {
+      toast({ title: "No Flashcards", description: "Generate some flashcards before saving.", variant: "destructive" });
+      return;
+    }
+
+    setIsSavingDeck(true);
+    try {
+      // Convert AppFlashcardClient[] to StoredFlashcard[]
+      const storedFlashcards: StoredFlashcard[] = flashcards.map(({ question, answer }) => ({ question, answer }));
+      
+      await createDeck(deckName, storedFlashcards, sourceMaterial);
+      toast({ title: "Deck Saved!", description: `"${deckName}" has been saved successfully.` });
+      setIsSaveDeckDialogOpen(false);
+      // Optionally, clear current flashcards or navigate to decks page
+      // setFlashcards([]); 
+      // setSourceMaterial(null);
+    } catch (error: any) {
+      console.error("Error saving deck:", error);
+      toast({ title: "Save Failed", description: error.message || "Could not save the deck. Please try again.", variant: "destructive" });
+    } finally {
+      setIsSavingDeck(false);
+    }
+  };
+
+
   if (authLoading || !user) {
-    // Show loading spinner or null while checking auth state or if user is not logged in
-    // This prevents rendering the main content before redirection or if auth is still loading.
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <LoadingSpinner size="lg" />
@@ -73,7 +111,15 @@ export default function HomePage() {
         )}
 
         {!isLoading && flashcards.length > 0 && (
-          <FlashcardReview initialFlashcards={flashcards} sourceMaterial={sourceMaterial} />
+          <>
+            <div className="flex justify-end">
+              <Button onClick={() => setIsSaveDeckDialogOpen(true)} variant="outline" className="border-accent text-accent hover:bg-accent/10">
+                <Save className="mr-2 h-4 w-4" />
+                Save Deck
+              </Button>
+            </div>
+            <FlashcardReview initialFlashcards={flashcards} sourceMaterial={sourceMaterial} />
+          </>
         )}
         
         {!isLoading && flashcards.length === 0 && (
@@ -86,10 +132,22 @@ export default function HomePage() {
               <p className="text-muted-foreground mt-1">
                  Use the controls above to upload an image, PDF, or enter text to generate your first set of flashcards.
               </p>
+              <p className="text-muted-foreground mt-1">
+                 You can also view your <Link href="/decks" className="text-accent hover:underline">saved decks</Link>.
+              </p>
             </CardContent>
           </Card>
         )}
       </main>
+
+      <SaveDeckDialog
+        isOpen={isSaveDeckDialogOpen}
+        onOpenChange={setIsSaveDeckDialogOpen}
+        onSave={handleSaveDeck}
+        isSaving={isSavingDeck}
+        defaultName={sourceMaterial?.text ? "Deck from Text" : (sourceMaterial?.imageUri ? "Deck from Image" : "My New Deck")}
+      />
+
       <footer className="text-center p-4 text-muted-foreground text-sm border-t">
         © {new Date().getFullYear()} Cardify - AI Powered Learning.
       </footer>
