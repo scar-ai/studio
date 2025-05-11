@@ -1,4 +1,3 @@
-
 "use client";
 
 import AuthForm from '@/components/auth/AuthForm';
@@ -10,29 +9,42 @@ import { useAuth } from '@/context/AuthContext';
 import { useEffect, useState } from 'react';
 import LoadingSpinner from '@/components/cardify/LoadingSpinner';
 
-const PAGE_NAME = "SignUpPage"; // Defined at the top
+const PAGE_NAME = "SignUpPage"; 
 
 export default function SignUpPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  // isProcessingRedirect is true if we are still expecting to process a potential redirect.
   const [isProcessingRedirect, setIsProcessingRedirect] = useState(true);
 
+  // Effect to handle the redirect result from Google Sign-In
   useEffect(() => {
-    const handleRedirect = async () => {
-      console.log(`${PAGE_NAME}: Running handleRedirect to check for Google redirect result...`);
+    const performRedirectCheck = async () => {
+      console.log(`${PAGE_NAME}: performRedirectCheck initiated. authLoading: ${authLoading}, isProcessingRedirect: ${isProcessingRedirect}`);
+      if (!auth) {
+        console.error(`${PAGE_NAME}: Firebase auth object is not available. Cannot process redirect.`);
+        toast({
+          variant: "destructive",
+          title: "Firebase Error",
+          description: "Firebase authentication service is not available.",
+        });
+        setIsProcessingRedirect(false); 
+        setIsGoogleLoading(false); 
+        return;
+      }
+
       try {
         const result = await getRedirectResult(auth);
         if (result && result.user) {
-          console.log(`${PAGE_NAME}: Google redirect sign-up SUCCESSFUL. User ID: ${result.user.uid}, Email: ${result.user.email}. AuthContext's onAuthStateChanged should now handle user state update and navigation.`);
+          console.log(`${PAGE_NAME}: Google redirect sign-up SUCCESSFUL. User ID: ${result.user.uid}, Email: ${result.user.email}. AuthContext will handle state update.`);
           toast({
             title: "Sign Up Successful",
             description: `Welcome to Cardify, ${result.user.displayName || result.user.email}!`,
           });
-           // Navigation will be handled by the other useEffect watching `user` state from AuthContext.
         } else {
-          console.log(`${PAGE_NAME}: getRedirectResult returned null or no user. This is normal if not a redirect flow from Google, or if the redirect was already processed. If you expected a sign-up, please verify Firebase console settings (especially 'Authorized domains') and check for any network errors during the redirect process. Ensure your Firebase project configuration in .env.local is correct and the development server was restarted after changes.`);
+          console.log(`${PAGE_NAME}: getRedirectResult returned null or no user. This is normal if not a redirect flow, or if the redirect was already processed. If you just signed up with Google, check Firebase Console 'Authorized domains' and ensure no network errors during redirect.`);
         }
       } catch (error: any) {
         console.error(`${PAGE_NAME}: Google redirect sign-up error: Code: ${error.code}, Message: ${error.message}`, error);
@@ -47,7 +59,7 @@ export default function SignUpPage() {
           errorMessage = "Google Sign-Up is not properly configured for this domain or project. Please check Firebase console (Authorized domains, API restrictions).";
         } else if (error.code === 'auth/internal-error' || error.code === 'auth/api-key-not-valid' || error.code === 'auth/app-deleted' || error.code === 'auth/configuration-not-found' || error.code === 'auth/invalid-api-key') {
             errorMessage = "Firebase configuration error. Please ensure your API key and project settings are correct in .env.local and the Firebase console.";
-            console.error(`${PAGE_NAME}: CRITICAL FIREBASE CONFIGURATION ISSUE DETECTED. The .env.local file needs to be checked for correct Firebase credentials, and the Firebase console for enabled Authentication methods and Authorized Domains. See firebase.ts for more detailed instructions if its internal checks also logged errors.`);
+            console.error(`${PAGE_NAME}: CRITICAL FIREBASE CONFIGURATION ISSUE DETECTED. Check .env.local, Firebase console for Auth methods & Authorized Domains.`);
         }
         toast({
           variant: "destructive",
@@ -55,31 +67,23 @@ export default function SignUpPage() {
           description: errorMessage,
         });
       } finally {
+        console.log(`${PAGE_NAME}: performRedirectCheck finally. Setting isProcessingRedirect to false.`);
         setIsProcessingRedirect(false);
         setIsGoogleLoading(false);
       }
     };
 
-    if (!authLoading && auth && isProcessingRedirect) {
-      console.log(`${PAGE_NAME}: Conditions met to call handleRedirect. authLoading: false, auth initialized: ${!!auth}, isProcessingRedirect: true.`);
-      handleRedirect();
+    if (!authLoading && isProcessingRedirect) {
+      console.log(`${PAGE_NAME}: useEffect (deps: authLoading) - Conditions met to call performRedirectCheck. authLoading: ${authLoading}, isProcessingRedirect: ${isProcessingRedirect}`);
+      performRedirectCheck();
     } else if (authLoading) {
-      console.log(`${PAGE_NAME}: Waiting for authLoading (AuthContext) to complete before processing redirect.`);
+      console.log(`${PAGE_NAME}: useEffect (deps: authLoading) - Waiting for authLoading to complete before checking redirect.`);
     } else if (!isProcessingRedirect) {
-      // This is normal if the page was loaded without a pending redirect.
-      // console.log(`${PAGE_NAME}: Redirect already processed or not applicable for this page load.`);
-    } else if (!auth) {
-      console.error(`${PAGE_NAME}: Firebase auth object (from firebase.ts) not available. Cannot process redirect. This strongly indicates a Firebase initialization problem. Check .env.local and restart the server.`);
-      setIsProcessingRedirect(false);
-      setIsGoogleLoading(false);
-      toast({
-        variant: "destructive",
-        title: "Firebase Error",
-        description: "Firebase authentication service is not available. Please check configuration.",
-      });
+      console.log(`${PAGE_NAME}: useEffect (deps: authLoading) - Redirect already processed or not applicable.`);
     }
-  }, [authLoading, isProcessingRedirect, toast, router]); // `auth` is stable
+  }, [authLoading, toast]); // `isProcessingRedirect` is NOT in deps here.
 
+  // Effect to navigate user if already logged in and redirect is processed
   useEffect(() => {
     if (!authLoading && !isProcessingRedirect && user) {
       console.log(`${PAGE_NAME}: User is authenticated (User ID: ${user.uid}) and redirect processing complete. Navigating to /.`);
@@ -95,6 +99,8 @@ export default function SignUpPage() {
         title: "Sign Up Successful",
         description: "Welcome to Cardify! You can now log in.",
       });
+      // For email/password, onAuthStateChanged in AuthContext will update user,
+      // then the useEffect above will navigate to '/'. If you want explicit redirect to login:
       router.push('/login'); 
     } catch (error: any) {
       console.error(`${PAGE_NAME}: Sign up error: Code: ${error.code}, Message: ${error.message}`, error);
@@ -105,7 +111,7 @@ export default function SignUpPage() {
         errorMessage = "Password is too weak. Please choose a stronger password.";
       } else if (error.code === 'auth/invalid-api-key' || error.code === 'auth/configuration-not-found') {
         errorMessage = "Firebase configuration error. Please check API key and project settings.";
-        console.error(`${PAGE_NAME}: CRITICAL FIREBASE CONFIGURATION ISSUE DETECTED during email/password signup. Check .env.local and Firebase console.`);
+        console.error(`${PAGE_NAME}: CRITICAL FIREBASE CONFIGURATION ISSUE DETECTED during email/password signup.`);
       }
       throw new Error(errorMessage); 
     }
@@ -137,8 +143,6 @@ export default function SignUpPage() {
     );
   }
   
-  // If we reach here, authLoading is false, isProcessingRedirect is false, and user is null.
-  // So, we should show the AuthForm.
   return (
     <AuthForm
       isSignUp
