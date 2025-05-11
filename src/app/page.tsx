@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -14,7 +15,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { createDeck } from '@/lib/supabase/decks';
-import Link from 'next/link'; // Added import
+import Link from 'next/link';
 
 export interface GenerationResult {
   flashcards: FlashcardCore[];
@@ -40,7 +41,9 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      router.replace('/login');
+      // If unauthenticated on the client, redirect to landing page.
+      // Middleware should ideally handle this first, but this is a client-side fallback.
+      router.replace('/landing');
     }
   }, [user, authLoading, router]);
 
@@ -88,6 +91,7 @@ export default function HomePage() {
 
 
   if (authLoading || !user) {
+    // Show loading spinner if auth is loading or if user is not yet available (before redirect kicks in)
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <LoadingSpinner size="lg" />

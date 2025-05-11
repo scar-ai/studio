@@ -1,3 +1,4 @@
+
 // src/app/decks/[deckId]/review/page.tsx
 "use client";
 
@@ -11,6 +12,7 @@ import { useRouter, useParams } from 'next/navigation'; // useParams for client 
 import { getDeckById } from '@/lib/supabase/decks';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button'; // Import Button
 import Link from 'next/link';
 import { AlertTriangle } from 'lucide-react';
 
@@ -30,7 +32,7 @@ export default function DeckReviewPage() {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      router.replace('/login');
+      router.replace('/landing'); // Redirect to landing if not authenticated
     }
   }, [user, authLoading, router]);
 
@@ -76,12 +78,12 @@ export default function DeckReviewPage() {
     );
   }
   
-  if (!user) {
+  if (!user && !authLoading) { // Added !authLoading
      return (
       <div className="min-h-screen flex flex-col bg-background text-foreground">
         <Header />
         <main className="flex-grow container mx-auto p-4 md:p-8 flex justify-center items-center">
-          <p>Redirecting to login...</p>
+          <p>Redirecting...</p> {/* Changed from login to generic redirecting */}
         </main>
       </div>
     );

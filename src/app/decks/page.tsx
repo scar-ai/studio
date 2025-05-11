@@ -1,3 +1,4 @@
+
 // src/app/decks/page.tsx
 "use client";
 
@@ -25,7 +26,7 @@ export default function DecksListPage() {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      router.replace('/login');
+      router.replace('/landing'); // Redirect to landing if not authenticated
     } else if (user) {
       fetchDecks();
     }
@@ -74,14 +75,14 @@ export default function DecksListPage() {
     );
   }
   
-  if (!user) {
-     // This case should ideally be handled by the redirect in useEffect, 
-     // but as a fallback or during brief state transitions:
+  if (!user && !authLoading) { // Added !authLoading to ensure it's not a premature render
+    // This case should ideally be handled by the redirect in useEffect,
+    // but as a fallback or during brief state transitions:
     return (
       <div className="min-h-screen flex flex-col bg-background text-foreground">
         <Header />
         <main className="flex-grow container mx-auto p-4 md:p-8 flex justify-center items-center">
-          <p>Redirecting to login...</p>
+          <p>Redirecting...</p> {/* Changed from login to generic redirecting */}
         </main>
       </div>
     );
