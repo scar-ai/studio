@@ -14,6 +14,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { createDeck } from '@/lib/supabase/decks';
+import Link from 'next/link'; // Added import
 
 export interface GenerationResult {
   flashcards: FlashcardCore[];
