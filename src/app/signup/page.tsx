@@ -9,32 +9,33 @@ import { useAuth } from '@/context/AuthContext';
 import { useEffect, useState } from 'react';
 import LoadingSpinner from '@/components/cardify/LoadingSpinner';
 
+const PAGE_NAME = "SignUpPage";
+
 export default function SignUpPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  // Initialize to true to ensure getRedirectResult runs on initial load.
   const [isProcessingRedirect, setIsProcessingRedirect] = useState(true);
 
   useEffect(() => {
     const handleRedirect = async () => {
-      console.log("SignUpPage: Checking for Google redirect result...");
+      console.log(`${PAGE_NAME}: Running handleRedirect to check for Google redirect result...`);
+      // setIsGoogleLoading(true); // As in LoginPage
       try {
         const result = await getRedirectResult(auth);
-        if (result) {
-          console.log("SignUpPage: Google redirect sign-up successful. User:", result.user?.uid, result.user?.email);
-          // The useAuth().user state will update via onAuthStateChanged.
-          // The useEffect below watching `user` will handle redirection to '/'.
+        if (result && result.user) {
+          console.log(`${PAGE_NAME}: Google redirect sign-up successful. User:`, result.user?.uid, result.user?.email);
           toast({
             title: "Sign Up Successful",
             description: `Welcome to Cardify, ${result.user.displayName || result.user.email}!`,
           });
+          // Navigation will be handled by the other useEffect watching `user` state.
         } else {
-          console.log("SignUpPage: No Google redirect result found or already processed.");
+          console.log(`${PAGE_NAME}: No Google redirect result found or result already processed.`);
         }
       } catch (error: any) {
-        console.error("SignUpPage: Google redirect sign-up error:", error.code, error.message);
+        console.error(`${PAGE_NAME}: Google redirect sign-up error:`, error.code, error.message);
         let errorMessage = "Could not complete sign-up with Google. Please try again.";
         if (error.code === 'auth/account-exists-with-different-credential') {
           errorMessage = "An account already exists with this email using a different sign-in method. Please try logging in.";
@@ -54,24 +55,27 @@ export default function SignUpPage() {
         });
       } finally {
         setIsProcessingRedirect(false);
-        // If Google sign-up was attempted, it might have set isGoogleLoading.
-        // We reset it here as the redirect processing is done.
         setIsGoogleLoading(false);
       }
     };
 
-    if (auth) {
-        handleRedirect();
-    } else {
-        console.error("SignUpPage: Firebase auth object not available for getRedirectResult.");
-        setIsProcessingRedirect(false);
-        setIsGoogleLoading(false);
+    if (!authLoading && auth && isProcessingRedirect) {
+      console.log(`${PAGE_NAME}: Conditions met to call handleRedirect. authLoading: false, isProcessingRedirect: true.`);
+      handleRedirect();
+    } else if (authLoading) {
+      console.log(`${PAGE_NAME}: Waiting for authLoading (AuthContext) to complete before processing redirect.`);
+    } else if (!isProcessingRedirect) {
+      // console.log(`${PAGE_NAME}: Redirect already processed or not applicable for this page load.`);
+    } else if (!auth) {
+      console.error(`${PAGE_NAME}: Firebase auth object (from firebase.ts) not available. Cannot process redirect.`);
+      setIsProcessingRedirect(false);
+      setIsGoogleLoading(false);
     }
-  }, [toast]); // Removed router from deps
+  }, [authLoading, isProcessingRedirect, toast, router]);
 
   useEffect(() => {
     if (!authLoading && !isProcessingRedirect && user) {
-      console.log("SignUpPage: User detected, redirecting to /");
+      console.log(`${PAGE_NAME}: User is authenticated and redirect processing complete. Navigating to /.`);
       router.replace('/'); 
     }
   }, [user, authLoading, isProcessingRedirect, router]);
@@ -79,9 +83,7 @@ export default function SignUpPage() {
   const handleSignUp = async (values: { email: string; password: string }) => {
     try {
       await createUserWithEmailAndPassword(auth, values.email, values.password);
-      // Successful creation will trigger onAuthStateChanged, AuthContext updates,
-      // and then the user will be redirected to /login by this page.
-      console.log("SignUpPage: Email/Password signup initiated for:", values.email);
+      console.log(`${PAGE_NAME}: Email/Password signup initiated for:`, values.email);
       toast({
         title: "Sign Up Successful",
         description: "Welcome to Cardify! You can now log in.",
@@ -95,32 +97,27 @@ export default function SignUpPage() {
       } else if (error.code === 'auth/weak-password') {
         errorMessage = "Password is too weak. Please choose a stronger password.";
       }
-      throw new Error(errorMessage); // This will be caught by AuthForm's submit handler
+      throw new Error(errorMessage); 
     }
   };
 
   const handleGoogleSignUp = async () => {
     setIsGoogleLoading(true);
-    // setIsProcessingRedirect(true); // Not strictly needed here as page will reload
     const provider = new GoogleAuthProvider();
     try {
       await signInWithRedirect(auth, provider);
-      // The page will redirect. Result is handled by getRedirectResult in the useEffect hook.
-      console.log("SignUpPage: Google sign-up redirect initiated.");
+      console.log(`${PAGE_NAME}: Google sign-up redirect initiated.`);
     } catch (error: any) {
-      console.error("SignUpPage: Google sign-up initiation error:", error.code, error.message);
+      console.error(`${PAGE_NAME}: Google sign-up initiation error:`, error.code, error.message);
       toast({
         variant: "destructive",
         title: "Google Sign-Up Error",
         description: "Could not start Google Sign-Up. Please check your connection and try again.",
       });
       setIsGoogleLoading(false);
-      // setIsProcessingRedirect(false);
     }
   };
 
-  // Show loading spinner if auth is loading, or if processing a redirect,
-  // or if user is already logged in and about to be redirected.
   if (authLoading || isProcessingRedirect || (!authLoading && !isProcessingRedirect && user)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-primary/30 to-background">
@@ -129,7 +126,6 @@ export default function SignUpPage() {
     );
   }
 
-  // If not loading, not processing redirect, and no user, show the form.
   return (
     <AuthForm
       isSignUp
@@ -144,4 +140,3 @@ export default function SignUpPage() {
     />
   );
 }
-
