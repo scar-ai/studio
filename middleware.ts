@@ -39,7 +39,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Define public paths (accessible without authentication)
-  const publicPaths = ['/login', '/signup', '/auth/callback'];
+  const publicPaths = ['/login', '/signup', '/auth/callback', '/landing'];
 
   // If user is not authenticated and trying to access a protected route
   if (!session && !publicPaths.some(path => pathname.startsWith(path))) {
@@ -47,11 +47,11 @@ export async function middleware(request: NextRequest) {
     if (pathname.startsWith('/api/')) {
         return response;
     }
-    return NextResponse.redirect(new URL('/login', request.url));
+    return NextResponse.redirect(new URL('/landing', request.url));
   }
 
-  // If user is authenticated and trying to access login or signup page
-  if (session && (pathname.startsWith('/login') || pathname.startsWith('/signup'))) {
+  // If user is authenticated and trying to access login, signup page or landing page
+  if (session && (pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/landing'))) {
     return NextResponse.redirect(new URL('/', request.url));
   }
   
