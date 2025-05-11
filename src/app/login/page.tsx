@@ -1,3 +1,4 @@
+
 "use client";
 
 import AuthForm from '@/components/auth/AuthForm';
@@ -48,7 +49,7 @@ export default function LoginPage() {
         title: "Login Successful",
         description: "Signed in with Google successfully!",
       });
-      router.push('/');
+      router.push('/'); // Corrected: Redirect to home page after successful Google login
     } catch (error: any) {
       console.error("Google login error: ", error);
       let errorMessage = "Could not sign in with Google. Please try again.";
