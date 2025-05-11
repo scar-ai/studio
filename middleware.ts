@@ -35,33 +35,51 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const { data: { session } } = await supabase.auth.getSession();
-  const { pathname } = request.nextUrl;
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-  const publicPaths = ['/login', '/signup', '/auth/callback', '/landing'];
-
-  // Rule 1: Authenticated user trying to access public auth/landing pages
-  // If user is authenticated and trying to access login, signup page or landing page, redirect to home ('/')
-  if (session && (pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/landing'))) {
-    return NextResponse.redirect(new URL('/', request.url));
+  if (sessionError) {
+    console.error("Middleware: Supabase getSession error:", sessionError.message);
+    // Treat as unauthenticated for safety if session retrieval fails, session will be null.
   }
 
-  // Rule 2: Unauthenticated user
-  if (!session) {
-    const isPublicPage = publicPaths.some(path => pathname.startsWith(path));
-    const isApiRoute = pathname.startsWith('/api/');
+  const { pathname } = request.nextUrl;
+  const publicAuthPaths = ['/login', '/signup', '/landing']; // Paths that authenticated users should be redirected away from.
+  const allPublicPaths = ['/login', '/signup', '/auth/callback', '/landing']; // All generally accessible paths.
 
-    if (isPublicPage || isApiRoute) {
-      // Allow access to public pages and API routes
+  // Handle authenticated users
+  if (session) {
+    // If an authenticated user tries to access /login, /signup, or /landing, redirect them to the app's root.
+    // /auth/callback is excluded here as it needs to be processed even if a session exists.
+    if (publicAuthPaths.some(p => pathname.startsWith(p))) {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+    // For any other path (e.g., '/', '/decks', or '/auth/callback'), allow access.
+    // The `response` object might have been modified by Supabase cookie operations (e.g., token refresh).
+    return response;
+  }
+
+  // Handle unauthenticated users
+  if (!session) {
+    // Explicitly redirect the root path ('/') to '/landing' for unauthenticated users.
+    if (pathname === '/') {
+      return NextResponse.redirect(new URL('/landing', request.url));
+    }
+
+    const isAllowedPublicPath = allPublicPaths.some(p => pathname.startsWith(p));
+    const isApiRoute = pathname.startsWith('/api/'); // API routes often handle their own authentication or are public.
+
+    if (isAllowedPublicPath || isApiRoute) {
+      // Allow access to designated public paths (e.g., /login, /landing) and API routes.
       return response;
     } else {
-      // For all other paths (including root '/' or any other protected route), redirect to landing
+      // For any other path not listed as public (e.g., /decks), redirect to /landing.
       return NextResponse.redirect(new URL('/landing', request.url));
     }
   }
   
-  // Rule 3: Authenticated user on a non-auth/landing page (e.g., '/', '/decks')
-  // Or any other case not covered (should be minimal, e.g. authenticated user on a protected route)
+  // This fallback should ideally not be reached given the exhaustive session/!session checks.
+  // If it were reached, it implies an ambiguous state; returning `response` (NextResponse.next()) is a neutral default.
+  // However, this effectively covers the case for authenticated users on allowed paths already handled above.
   return response;
 }
 
@@ -77,3 +95,4 @@ export const config = {
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
+
