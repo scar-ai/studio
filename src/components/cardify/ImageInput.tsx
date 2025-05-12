@@ -8,7 +8,12 @@ import { useToast } from '@/hooks/use-toast';
 import { readFileAsDataURL } from '@/lib/fileReader';
 import { imageToFlashcard, type ImageToFlashcardInput } from '@/ai/flows/image-to-flashcard';
 import type { GenerationResult } from '@/app/page';
-import { UploadCloud } from 'lucide-react';
+import { UploadCloud, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+
+// Vercel Hobby plan limits might restrict file size/processing time. Let's set a reasonable client-side limit.
+const MAX_IMAGE_SIZE_MB = 10;
+const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
 
 interface ImageInputProps {
   onFlashcardsGenerated: (result: GenerationResult) => void;
@@ -18,22 +23,42 @@ interface ImageInputProps {
 
 export default function ImageInput({ onFlashcardsGenerated, setIsLoading, isLoading }: ImageInputProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    setFileError(null); // Reset error on new file selection
     if (file) {
-      setSelectedFile(file);
+      if (file.size > MAX_IMAGE_SIZE_BYTES) {
+        setFileError(`Image is too large. Please select a file smaller than ${MAX_IMAGE_SIZE_MB} MB.`);
+        setSelectedFile(null);
+         event.target.value = ""; // Clear the input
+      } else {
+        setSelectedFile(file);
+      }
     } else {
       setSelectedFile(null);
     }
   };
+
+  const resetInput = () => {
+      setSelectedFile(null);
+      setFileError(null);
+      const fileInput = document.getElementById('image-upload') as HTMLInputElement;
+      if (fileInput) fileInput.value = "";
+  }
 
   const handleSubmit = async () => {
     if (!selectedFile) {
       toast({ title: "No file selected", description: "Please select an image file.", variant: "destructive" });
       return;
     }
+     if (fileError) {
+      toast({ title: "File Error", description: fileError, variant: "destructive" });
+      return;
+    }
+
 
     setIsLoading(true);
     let photoDataUri = '';
@@ -41,7 +66,7 @@ export default function ImageInput({ onFlashcardsGenerated, setIsLoading, isLoad
       photoDataUri = await readFileAsDataURL(selectedFile);
       const input: ImageToFlashcardInput = { photoDataUri };
       const result = await imageToFlashcard(input);
-      
+
       if (result.flashcards && result.flashcards.length > 0) {
         onFlashcardsGenerated({ flashcards: result.flashcards, sourceContext: { imageUri: photoDataUri } });
         toast({ title: "Success!", description: `${result.flashcards.length} flashcards generated from image.` });
@@ -53,17 +78,15 @@ export default function ImageInput({ onFlashcardsGenerated, setIsLoading, isLoad
       console.error("Error generating flashcards from image:", error);
       // Pass photoDataUri even in case of error if available, so AI can still potentially use it.
       onFlashcardsGenerated({ flashcards: [], sourceContext: photoDataUri ? { imageUri: photoDataUri } : undefined });
-      toast({ 
-        title: "Error Processing Image", 
-        description: "Failed to generate flashcards. The file might be too large, a network issue occurred, or the content is unprocessable. Please try a smaller file or check your connection.", 
+      toast({
+        title: "Error Processing Image",
+        description: `Failed to generate flashcards. This might be due to file size, complexity, or server limitations (especially on deployment platforms like Vercel). Please try a smaller or simpler image. Error: ${error.message || 'Unknown error'}`,
         variant: "destructive",
-        duration: 7000,
+        duration: 9000, // Longer duration for error message
       });
     } finally {
       setIsLoading(false);
-      setSelectedFile(null); 
-      const fileInput = document.getElementById('image-upload') as HTMLInputElement;
-      if (fileInput) fileInput.value = "";
+      resetInput();
     }
   };
 
@@ -71,11 +94,18 @@ export default function ImageInput({ onFlashcardsGenerated, setIsLoading, isLoad
     <div className="space-y-4 p-6 bg-card rounded-lg shadow">
       <h3 className="text-lg font-semibold text-card-foreground">Upload an Image</h3>
       <p className="text-sm text-muted-foreground">
-        Take a photo of your notes or upload a screenshot. We'll turn it into flashcards!
+        Take a photo of your notes or upload a screenshot. We'll turn it into flashcards! (Max {MAX_IMAGE_SIZE_MB}MB)
       </p>
       <Input id="image-upload" type="file" accept="image/*" onChange={handleFileChange} className="file:text-accent file:font-semibold" disabled={isLoading} />
-      {selectedFile && <p className="text-sm text-muted-foreground">Selected: {selectedFile.name}</p>}
-      <Button onClick={handleSubmit} disabled={isLoading || !selectedFile} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
+       {fileError && (
+         <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>File Error</AlertTitle>
+          <AlertDescription>{fileError}</AlertDescription>
+        </Alert>
+      )}
+      {selectedFile && !fileError && <p className="text-sm text-muted-foreground">Selected: {selectedFile.name}</p>}
+      <Button onClick={handleSubmit} disabled={isLoading || !selectedFile || !!fileError} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
         <UploadCloud className="mr-2 h-4 w-4" />
         {isLoading ? 'Processing...' : 'Generate from Image'}
       </Button>
