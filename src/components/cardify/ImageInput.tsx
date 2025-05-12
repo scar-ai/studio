@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from 'react';
@@ -48,11 +49,16 @@ export default function ImageInput({ onFlashcardsGenerated, setIsLoading, isLoad
         onFlashcardsGenerated({ flashcards: [], sourceContext: { imageUri: photoDataUri } });
         toast({ title: "No flashcards generated", description: "Could not find information to create flashcards from the image." });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating flashcards from image:", error);
       // Pass photoDataUri even in case of error if available, so AI can still potentially use it.
       onFlashcardsGenerated({ flashcards: [], sourceContext: photoDataUri ? { imageUri: photoDataUri } : undefined });
-      toast({ title: "Error", description: "Failed to generate flashcards from image. Please try again.", variant: "destructive" });
+      toast({ 
+        title: "Error Processing Image", 
+        description: "Failed to generate flashcards. The file might be too large, a network issue occurred, or the content is unprocessable. Please try a smaller file or check your connection.", 
+        variant: "destructive",
+        duration: 7000,
+      });
     } finally {
       setIsLoading(false);
       setSelectedFile(null); 

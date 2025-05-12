@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from 'react';
@@ -48,10 +49,15 @@ export default function PdfInput({ onFlashcardsGenerated, setIsLoading, isLoadin
         onFlashcardsGenerated({ flashcards: [], sourceContext: { text: result.extractedText } });
         toast({ title: "No flashcards generated", description: "Could not find information to create flashcards from the PDF. The extracted text was still passed as context." });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating flashcards from PDF:", error);
       onFlashcardsGenerated({ flashcards: [], sourceContext: { text: result?.extractedText || "Error extracting text or processing PDF." } });
-      toast({ title: "Error", description: "Failed to generate flashcards from PDF. Please try again.", variant: "destructive" });
+      toast({ 
+        title: "Error Processing PDF", 
+        description: "Failed to generate flashcards. The file might be too large, a network issue occurred, or the content is unprocessable. Please try a smaller file or check your connection.", 
+        variant: "destructive",
+        duration: 7000,
+      });
     } finally {
       setIsLoading(false);
       setSelectedFile(null);
